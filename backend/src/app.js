@@ -1,0 +1,121 @@
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const app = express();
+const connectDB = require("./config/db");
+const notesModel = require("./models/notes.model");
+
+connectDB();
+
+app.use(cors());
+app.use(express.json());
+
+app.post("/addnote", async (req, res) => {
+  const { title, description } = req.body;
+
+  if (!title || !description) {
+    return res.status(400).json({
+      message: "All field required",
+    });
+  }
+
+  const newNote = await notesModel.create({ title, description });
+
+  return res.status(201).json({
+    message: "Note created successfully",
+    newNote,
+  });
+});
+
+app.get("/getnotes", async (req, res) => {
+  const allNotes = await notesModel.find();
+
+  return res.status(200).json({
+    message: "Notes fetched successfully",
+    allNotes,
+  });
+});
+
+app.get("/getnote/:id", async (req, res) => {
+  const singleNote = await notesModel.findById(req.params.id);
+
+  if (!singleNote) {
+    return res.status(404).json({
+      message: "Note not found",
+    });
+  }
+
+  return res.status(200).json({
+    message: "Notes fetched successfully",
+    singleNote,
+  });
+});
+
+app.delete("/deletenote/:id", async (req, res) => {
+  try {
+    const deleteNote = await notesModel.findByIdAndDelete(req.params.id);
+
+    if (!deleteNote) {
+      return res.status(404).json({
+        message: "Note not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Note Deleted Successfully",
+      id: req.params.id,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+});
+
+
+
+
+app.put("/updatenote/:id",async(req,res)=>{
+  try {
+    const id = req.params.id;
+    
+    const {title,description}= req.body;
+
+    const updatedNote = await notesModel.findByIdAndUpdate(
+      id,
+      {
+        title,description
+      },
+      {new : true}
+
+    )
+
+    if(!updatedNote){
+      return res.status(404).json({
+        message : "Note not found"
+      })
+    }
+
+
+    return res.status(200).json({
+      message : "Note updated successfully",
+      updatedNote 
+
+    })
+
+  } catch (error) {
+        res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+})
+
+
+
+
+
+
+module.exports = app;
