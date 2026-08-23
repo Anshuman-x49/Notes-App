@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const app = express();
 const connectDB = require("./config/db");
 const notesModel = require("./models/notes.model");
@@ -9,6 +10,9 @@ connectDB();
 
 app.use(cors());
 app.use(express.json());
+
+const publicPath = path.join(__dirname, "../public");
+app.use(express.static(publicPath));
 
 app.post("/addnote", async (req, res) => {
   const { title, description, isFavorite } = req.body;
@@ -115,5 +119,10 @@ app.put("/updatenote/:id", async (req, res) => {
     });
   }
 })
+
+// SPA fallback: serve index.html for all remaining routes in Express 5
+app.get("/{*splat}", (req, res) => {
+  res.sendFile(path.join(publicPath, "index.html"));
+});
 
 module.exports = app;
