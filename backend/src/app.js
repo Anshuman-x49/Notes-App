@@ -14,10 +14,6 @@ app.use(express.json());
 const publicPath = path.join(__dirname, "../public");
 app.use(express.static(publicPath));
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(publicPath, "index.html"));
-})
-
 app.post("/addnote", async (req, res) => {
   const { title, description, isFavorite } = req.body;
 
@@ -124,9 +120,16 @@ app.put("/updatenote/:id", async (req, res) => {
   }
 })
 
+const fs = require("fs");
+
 // SPA fallback: serve index.html for all remaining routes in Express 5
 app.get("/{*splat}", (req, res) => {
-  res.sendFile(path.join(publicPath, "index.html"));
+  const indexPath = path.join(publicPath, "index.html");
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send("Server running. Frontend static build not found in public directory.");
+  }
 });
 
 module.exports = app;
