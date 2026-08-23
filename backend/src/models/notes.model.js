@@ -8,6 +8,10 @@ const noteSchema = new mongoose.Schema({
     description : {
         type : String,
         minlength : 10,
+    },
+    isFavorite : {
+        type : Boolean,
+        default : false,
     }
 }) 
 

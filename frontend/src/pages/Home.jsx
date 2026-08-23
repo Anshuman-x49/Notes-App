@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { RefreshCw, Star } from 'lucide-react'
 import NoteCard from '../components/NoteCard'
 import AddNoteModal from '../components/AddNoteModal'
 import { fetchNotes, createNoteApi, updateNoteApi, deleteNoteApi } from '../api/notesApi'
@@ -9,6 +10,7 @@ const Home = () => {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [isBackendConnected, setIsBackendConnected] = useState(true)
+  const [activeTab, setActiveTab] = useState('all') // 'all' | 'favorites'
 
   // Modal state for Add Note Form (React Hook Form)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -43,13 +45,22 @@ const Home = () => {
 
   const activeNote = notes.find((note) => note._id === activeNoteId) ?? notes[0]
 
-  const visibleNotes = useMemo(
-    () => notes.filter((note) =>
-      (note.title || '').toLowerCase().includes(search.toLowerCase()) ||
-      (note.description || '').toLowerCase().includes(search.toLowerCase())
-    ),
-    [notes, search]
+  const favoritesCount = useMemo(
+    () => notes.filter((n) => n.isFavorite).length,
+    [notes]
   )
+
+  const visibleNotes = useMemo(() => {
+    const tabFiltered = activeTab === 'favorites'
+      ? notes.filter((n) => n.isFavorite)
+      : notes
+
+    return tabFiltered.filter(
+      (note) =>
+        (note.title || '').toLowerCase().includes(search.toLowerCase()) ||
+        (note.description || '').toLowerCase().includes(search.toLowerCase())
+    )
+  }, [notes, activeTab, search])
 
   // Callback called by AddNoteModal when React Hook Form submits valid data
   const handleAddNoteSubmit = async (formData) => {
@@ -68,6 +79,7 @@ const Home = () => {
         _id: newId,
         title: formData.title,
         description: formData.description,
+        isFavorite: false,
         __v: 0
       }
       setNotes((currentNotes) => [localNote, ...currentNotes])
@@ -93,13 +105,32 @@ const Home = () => {
     }
   }
 
+  const toggleFavoriteNote = async (idToToggle) => {
+    let newFavState = false
+    setNotes((currentNotes) =>
+      currentNotes.map((n) => {
+        if (n._id === idToToggle) {
+          newFavState = !n.isFavorite
+          return { ...n, isFavorite: newFavState }
+        }
+        return n
+      })
+    )
+
+    try {
+      await updateNoteApi(idToToggle, { isFavorite: newFavState })
+    } catch (err) {
+      console.warn("Failed to sync favorite status to server:", err)
+    }
+  }
+
   const updateActiveNoteTitle = (title) => {
     if (!activeNote) return
     const updated = { ...activeNote, title }
     setNotes((currentNotes) => currentNotes.map((n) => (n._id === activeNote._id ? updated : n)))
 
     // Save to API
-    syncNoteToBackend(activeNote._id, updated.title, updated.description)
+    syncNoteToBackend(activeNote._id, updated.title, updated.description, updated.isFavorite)
   }
 
   const updateActiveNoteDescription = (description) => {
@@ -108,12 +139,12 @@ const Home = () => {
     setNotes((currentNotes) => currentNotes.map((n) => (n._id === activeNote._id ? updated : n)))
 
     // Save to API
-    syncNoteToBackend(activeNote._id, updated.title, updated.description)
+    syncNoteToBackend(activeNote._id, updated.title, updated.description, updated.isFavorite)
   }
 
-  const syncNoteToBackend = async (id, title, description) => {
+  const syncNoteToBackend = async (id, title, description, isFavorite) => {
     try {
-      await updateNoteApi(id, { title, description })
+      await updateNoteApi(id, { title, description, isFavorite })
     } catch (err) {
       console.warn("Sync failed for note update:", err)
     }
@@ -143,9 +174,9 @@ const Home = () => {
             <button
               onClick={loadNotesFromApi}
               title="Refresh notes from server"
-              className="text-[#9daea6] hover:text-white text-xs font-sans p-1 transition-colors"
+              className="text-[#9daea6] hover:text-white p-1.5 rounded-lg hover:bg-[#38504b]/50 transition-colors flex items-center justify-center"
             >
-              🔄
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
 
@@ -160,24 +191,32 @@ const Home = () => {
 
           {/* Navigation */}
           <nav className="mt-8 flex flex-row md:flex-col gap-1 font-sans text-xs font-medium" aria-label="Note views">
-            <a
-              className="flex-1 md:flex-initial flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#38504b] text-white shadow-xs"
-              href="#all-notes"
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-left cursor-pointer ${
+                activeTab === 'all'
+                  ? 'bg-[#38504b] text-white shadow-xs'
+                  : 'text-[#b7c4bd] hover:bg-[#38504b]/50 hover:text-white'
+              }`}
             >
-              All notes <span className="text-[#e5b46a] font-semibold">{notes.length}</span>
-            </a>
-            <a
-              className="flex-1 md:flex-initial flex items-center justify-between px-3 py-2.5 rounded-lg text-[#b7c4bd] hover:bg-[#38504b]/50 hover:text-white transition-colors"
-              href="#favorites"
+              <span>All notes</span>
+              <span className="text-[#e5b46a] font-semibold">{notes.length}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('favorites')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-left cursor-pointer ${
+                activeTab === 'favorites'
+                  ? 'bg-[#38504b] text-white shadow-xs'
+                  : 'text-[#b7c4bd] hover:bg-[#38504b]/50 hover:text-white'
+              }`}
             >
-              Favorites
-            </a>
-            <a
-              className="flex-1 md:flex-initial flex items-center justify-between px-3 py-2.5 rounded-lg text-[#b7c4bd] hover:bg-[#38504b]/50 hover:text-white transition-colors"
-              href="#archive"
-            >
-              Archive
-            </a>
+              <span className="flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> Favorites
+              </span>
+              <span className="text-[#e5b46a] font-semibold">{favoritesCount}</span>
+            </button>
           </nav>
         </div>
 
@@ -195,10 +234,12 @@ const Home = () => {
             <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#a26846] mb-1">
               Your space
             </p>
-            <h1 className="text-3xl font-serif text-[#263532] tracking-tight">All notes</h1>
+            <h1 className="text-3xl font-serif text-[#263532] tracking-tight">
+              {activeTab === 'favorites' ? 'Favorites' : 'All notes'}
+            </h1>
           </div>
           <span className="text-xs font-sans text-[#8c928d] bg-stone-200/60 px-2.5 py-1 rounded-full">
-            {notes.length} notes
+            {visibleNotes.length} {visibleNotes.length === 1 ? 'note' : 'notes'}
           </span>
         </div>
 
@@ -229,18 +270,25 @@ const Home = () => {
                 isSelected={note._id === activeNoteId}
                 onClick={() => setActiveNoteId(note._id)}
                 onDelete={deleteNote}
+                onToggleFavorite={toggleFavoriteNote}
               />
             ))
           ) : (
             <div className="p-6 text-center text-xs font-sans text-stone-500 bg-stone-100/50 rounded-xl space-y-2">
-              <p>No matching notes found.</p>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(true)}
-                className="text-[#a26846] font-semibold underline hover:text-[#8a5537]"
-              >
-                Create your first note
-              </button>
+              <p>
+                {activeTab === 'favorites'
+                  ? 'No favorite notes yet. Click the star icon on any note to mark it as a favorite!'
+                  : 'No matching notes found.'}
+              </p>
+              {activeTab === 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="text-[#a26846] font-semibold underline hover:text-[#8a5537]"
+                >
+                  Create your first note
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -250,14 +298,30 @@ const Home = () => {
       <section className="bg-[#fbfaf7] p-6 md:p-12 min-h-125 flex flex-col justify-between" aria-label="Note editor">
         <div>
           <div className="flex items-center justify-between pb-6 text-xs font-sans text-stone-400 uppercase tracking-wider">
-            <span>Editing note</span>
-            <button
-              className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 rounded-md transition-colors font-mono text-sm"
-              aria-label="More note options"
-              type="button"
-            >
-              ...
-            </button>
+            <span className="flex items-center gap-2">
+              Editing note
+              {activeNote?.isFavorite && (
+                <span className="flex items-center gap-1 text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded-full text-[10px] font-semibold lowercase tracking-normal">
+                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> favorite
+                </span>
+              )}
+            </span>
+            <div className="flex items-center gap-2">
+              {activeNote && (
+                <button
+                  onClick={() => toggleFavoriteNote(activeNote._id)}
+                  className={`p-1.5 rounded-md transition-colors flex items-center gap-1 text-xs font-sans normal-case ${
+                    activeNote.isFavorite
+                      ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                      : 'text-stone-400 hover:text-amber-600 hover:bg-stone-200/50'
+                  }`}
+                  title={activeNote.isFavorite ? 'Remove from favorites' : 'Mark as favorite'}
+                  type="button"
+                >
+                  <Star className={`w-4 h-4 ${activeNote.isFavorite ? 'fill-amber-400 text-amber-500' : ''}`} />
+                </button>
+              )}
+            </div>
           </div>
 
           {activeNote ? (

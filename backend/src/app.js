@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 app.post("/addnote", async (req, res) => {
-  const { title, description } = req.body;
+  const { title, description, isFavorite } = req.body;
 
   if (!title || !description) {
     return res.status(400).json({
@@ -19,7 +19,11 @@ app.post("/addnote", async (req, res) => {
     });
   }
 
-  const newNote = await notesModel.create({ title, description });
+  const newNote = await notesModel.create({
+    title,
+    description,
+    isFavorite: Boolean(isFavorite),
+  });
 
   return res.status(201).json({
     message: "Note created successfully",
@@ -77,45 +81,39 @@ app.delete("/deletenote/:id", async (req, res) => {
 
 
 
-app.put("/updatenote/:id",async(req,res)=>{
+app.put("/updatenote/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    
-    const {title,description}= req.body;
+    const { title, description, isFavorite } = req.body;
+
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (isFavorite !== undefined) updateData.isFavorite = isFavorite;
 
     const updatedNote = await notesModel.findByIdAndUpdate(
       id,
-      {
-        title,description
-      },
-      {new : true}
+      updateData,
+      { new: true }
+    );
 
-    )
-
-    if(!updatedNote){
+    if (!updatedNote) {
       return res.status(404).json({
-        message : "Note not found"
-      })
+        message: "Note not found"
+      });
     }
 
-
     return res.status(200).json({
-      message : "Note updated successfully",
-      updatedNote 
-
-    })
+      message: "Note updated successfully",
+      updatedNote
+    });
 
   } catch (error) {
-        res.status(500).json({
+    res.status(500).json({
       message: "Server Error",
       error: error.message,
     });
   }
 })
-
-
-
-
-
 
 module.exports = app;
