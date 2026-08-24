@@ -14,6 +14,10 @@ app.use(express.json());
 const publicPath = path.join(__dirname, "../public");
 app.use(express.static(publicPath));
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", message: "ok" });
+});
+
 app.post("/addnote", async (req, res) => {
   const { title, description, isFavorite } = req.body;
 
