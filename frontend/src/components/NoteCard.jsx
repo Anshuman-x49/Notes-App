@@ -12,7 +12,7 @@ import { Star } from 'lucide-react'
  * }
  */
 const NoteCard = ({ note, isSelected, onClick, onDelete, onToggleFavorite }) => {
-  const { _id, title, description, isFavorite, __v } = note
+  const { _id, title, description, isFavorite } = note
 
   const handleDelete = (e) => {
     e.stopPropagation()
@@ -27,8 +27,6 @@ const NoteCard = ({ note, isSelected, onClick, onDelete, onToggleFavorite }) => 
       onToggleFavorite(_id)
     }
   }
-
-  const shortId = _id ? `#${_id.slice(-6)}` : ''
 
   return (
     <div
@@ -94,22 +92,6 @@ const NoteCard = ({ note, isSelected, onClick, onDelete, onToggleFavorite }) => 
       <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed font-sans m-0">
         {description || 'No description provided.'}
       </p>
-
-      <div className="flex items-center gap-2 mt-1">
-        {shortId && (
-          <span
-            className="font-mono text-[10px] text-stone-500 bg-stone-200/80 px-2 py-0.5 rounded-md"
-            title={`ID: ${_id}`}
-          >
-            {shortId}
-          </span>
-        )}
-        {typeof __v === 'number' && (
-          <span className="text-[10px] font-semibold text-[#a26846] bg-[#f2e4d5] px-2 py-0.5 rounded-md">
-            v{__v}
-          </span>
-        )}
-      </div>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router'
 import { RefreshCw, Star } from 'lucide-react'
 import NoteCard from '../components/NoteCard'
 import AddNoteModal from '../components/AddNoteModal'
+import Sidebar from '../components/Sidebar'
 import { fetchNotes, createNoteApi, updateNoteApi, deleteNoteApi, toggleFavoriteApi } from '../api/notesApi'
 
 const Home = () => {
@@ -41,7 +42,7 @@ const Home = () => {
       const apiNotes = await fetchNotes()
       if (Array.isArray(apiNotes) && apiNotes.length > 0) {
         setNotes(apiNotes)
-        // If URL has note ID, select it; otherwise select first note
+        // If URL has note ID, select it; otherwise default to first note on desktop
         if (paramNoteId && apiNotes.some((n) => n._id === paramNoteId)) {
           setActiveNoteId(paramNoteId)
         } else {
@@ -63,6 +64,7 @@ const Home = () => {
   }
 
   const activeNote = notes.find((note) => note._id === activeNoteId) ?? notes[0]
+  const isMobileEditorOpen = Boolean(paramNoteId && activeNote)
 
   const favoritesCount = useMemo(
     () => notes.filter((n) => n.isFavorite).length,
@@ -194,7 +196,7 @@ const Home = () => {
   }
 
   return (
-    <main className="min-h-screen flex flex-col md:grid md:grid-cols-[230px_340px_minmax(0,1fr)] bg-[#f4f1eb] font-serif">
+    <main className="h-screen max-h-screen overflow-hidden flex flex-col sm:grid sm:grid-cols-[230px_320px_minmax(0,1fr)] bg-[#f4f1eb] font-serif">
       {/* Add Note Modal Component (React Hook Form) */}
       <AddNoteModal
         isOpen={isAddModalOpen}
@@ -203,78 +205,26 @@ const Home = () => {
         isSubmitting={isSubmittingNote}
       />
 
-      {/* Sidebar */}
-      <aside className="bg-[#293b38] text-[#f7f4ed] p-6 flex flex-col justify-between md:min-h-screen">
-        <div>
-          {/* Brand */}
-          <div className="flex items-center justify-between">
-            <div
-              className="flex items-center gap-3 text-xl font-bold tracking-tight cursor-pointer"
-              onClick={() => navigate('/')}
-            >
-              <div className="w-8 h-8 rounded-lg bg-[#e5b46a] text-[#293b38] font-bold text-lg flex items-center justify-center shadow-xs">
-                N
-              </div>
-              <span>Notely</span>
-            </div>
-            <button
-              onClick={loadNotesFromApi}
-              title="Refresh notes from server"
-              className="text-[#9daea6] hover:text-white p-1.5 rounded-lg hover:bg-[#38504b]/50 transition-colors flex items-center justify-center"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+      {/* Sidebar Component: 20vh only on phones (<640px), full height on tablets and desktops (sm+) */}
+      <div className={isMobileEditorOpen ? 'hidden sm:block h-full' : 'block h-[20vh] sm:h-full'}>
+        <Sidebar
+          onRefresh={loadNotesFromApi}
+          loading={loading}
+          onNewNote={() => setIsAddModalOpen(true)}
+          activeTab={activeTab}
+          totalNotesCount={notes.length}
+          favoritesCount={favoritesCount}
+          isBackendConnected={isBackendConnected}
+        />
+      </div>
 
-          {/* New Note Button -> Opens React Hook Form Modal */}
-          <button
-            className="w-full mt-8 py-3 px-4 rounded-lg bg-[#e5b46a] hover:bg-[#d9a557] active:scale-[0.98] text-[#293b38] font-sans font-bold text-sm flex items-center justify-start gap-2 transition-all shadow-sm"
-            onClick={() => setIsAddModalOpen(true)}
-            type="button"
-          >
-            <span className="text-xl leading-none" aria-hidden="true">+</span> New note
-          </button>
-
-          {/* Navigation with React Router */}
-          <nav className="mt-8 flex flex-row md:flex-col gap-1 font-sans text-xs font-medium" aria-label="Note views">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-left cursor-pointer ${
-                activeTab === 'all'
-                  ? 'bg-[#38504b] text-white shadow-xs'
-                  : 'text-[#b7c4bd] hover:bg-[#38504b]/50 hover:text-white'
-              }`}
-            >
-              <span>All notes</span>
-              <span className="text-[#e5b46a] font-semibold">{notes.length}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/favorites')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-left cursor-pointer ${
-                activeTab === 'favorites'
-                  ? 'bg-[#38504b] text-white shadow-xs'
-                  : 'text-[#b7c4bd] hover:bg-[#38504b]/50 hover:text-white'
-              }`}
-            >
-              <span className="flex items-center gap-1.5">
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> Favorites
-              </span>
-              <span className="text-[#e5b46a] font-semibold">{favoritesCount}</span>
-            </button>
-          </nav>
-        </div>
-
-        {/* Footer status */}
-        <div className="hidden md:flex items-center gap-2 text-xs font-sans text-[#9daea6] pt-6 border-t border-[#38504b]/60">
-          <span className={`w-2 h-2 rounded-full ${isBackendConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-          {isBackendConnected ? 'Connected to API' : 'Offline / Local Mode'}
-        </div>
-      </aside>
-
-      {/* Notes List Column */}
-      <section className="p-6 md:p-8 border-b md:border-b-0 md:border-r border-[#ddd8cf] flex flex-col gap-5 overflow-y-auto" id="all-notes">
+      {/* Notes List Column: 80vh only on phones (<640px), full height on tablets and desktops (sm+) */}
+      <section
+        className={`relative p-4 sm:p-6 md:p-8 border-b sm:border-b-0 sm:border-r border-[#ddd8cf] flex-col gap-4 sm:gap-5 h-[80vh] sm:h-full overflow-hidden ${
+          isMobileEditorOpen ? 'hidden sm:flex' : 'flex'
+        }`}
+        id="all-notes"
+      >
         <div className="flex items-end justify-between">
           <div>
             <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-[#a26846] mb-1">
@@ -302,8 +252,8 @@ const Home = () => {
           />
         </label>
 
-        {/* Note Cards */}
-        <div className="flex flex-col gap-2 mt-2">
+        {/* Note Cards with hidden scrollbar */}
+        <div className="flex flex-col gap-2 mt-2 overflow-y-auto no-scrollbar pb-16">
           {loading ? (
             <p className="p-6 text-center text-xs font-sans text-stone-500 bg-stone-100/50 rounded-xl animate-pulse">
               Loading notes from server...
@@ -338,13 +288,28 @@ const Home = () => {
             </div>
           )}
         </div>
+
+        {/* Gradient Fade Overlay at the bottom */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-linear-to-t from-[#f4f1eb] via-[#f4f1eb]/80 to-transparent z-10" />
       </section>
 
-      {/* Note Editor Column */}
-      <section className="bg-[#fbfaf7] p-6 md:p-12 min-h-125 flex flex-col justify-between" aria-label="Note editor">
+      {/* Note Editor Column: Visible on phones only when note is open, full height side-by-side on tablets and desktops */}
+      <section
+        className={`h-full bg-[#fbfaf7] p-6 sm:p-8 md:p-12 flex-col justify-between overflow-y-auto no-scrollbar ${
+          isMobileEditorOpen ? 'flex' : 'hidden sm:flex'
+        }`}
+        aria-label="Note editor"
+      >
         <div>
           <div className="flex items-center justify-between pb-6 text-xs font-sans text-stone-400 uppercase tracking-wider">
             <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(activeTab === 'favorites' ? '/favorites' : '/')}
+                className="sm:hidden flex items-center gap-1 text-xs font-sans font-bold text-[#a26846] hover:text-[#8a5537] bg-[#f2e4d5] px-2.5 py-1 rounded-lg transition-colors mr-1 cursor-pointer"
+              >
+                ← Notes
+              </button>
               Editing note
               {activeNote?.isFavorite && (
                 <span className="flex items-center gap-1 text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded-full text-[10px] font-semibold lowercase tracking-normal">
@@ -379,14 +344,7 @@ const Home = () => {
                 value={activeNote.title || ''}
               />
 
-              <div className="flex items-center gap-3 font-sans text-xs">
-                <span className="font-mono text-stone-600 bg-stone-200/70 px-2.5 py-1 rounded-lg border border-stone-300/40">
-                  ID: {activeNote._id}
-                </span>
-                <span className="font-semibold text-[#a26846] bg-[#f2e4d5] px-2.5 py-1 rounded-lg">
-                  v{activeNote.__v ?? 0}
-                </span>
-              </div>
+              <hr className="border-t border-[#ddd8cf] my-4" />
 
               <textarea
                 aria-label="Note description"

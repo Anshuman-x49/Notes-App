@@ -35,7 +35,7 @@ const AddNoteModal = ({ isOpen, onClose, onAddNote, isSubmitting }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-[#fbfaf7] border border-[#d9d4cb] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden font-serif">
+      <div className="bg-[#fbfaf7] border border-[#d9d4cb] w-full max-w-lg rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh] font-serif">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#ddd8cf] bg-[#f4f1eb]">
           <div className="flex items-center gap-2">

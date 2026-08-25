@@ -1,10 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Special Elite', system-ui;
+  --font-serif: 'Special Elite', system-ui;
+  --font-mono: 'Special Elite', system-ui;
+}
 
 @layer base {
   :root {
     color: #29312f;
     background-color: #f4f1eb;
-    font-family: Georgia, 'Times New Roman', serif;
+    font-family: 'Special Elite', system-ui;
   }
 
   body {
@@ -12,5 +19,17 @@
     min-width: 320px;
     background-color: #f4f1eb;
     color: #29312f;
+    font-family: 'Special Elite', system-ui;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
