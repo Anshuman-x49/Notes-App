@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router'
 import { RefreshCw, Star } from 'lucide-react'
 import NoteCard from '../components/NoteCard'
 import AddNoteModal from '../components/AddNoteModal'
-import { fetchNotes, createNoteApi, updateNoteApi, deleteNoteApi } from '../api/notesApi'
+import { fetchNotes, createNoteApi, updateNoteApi, deleteNoteApi, toggleFavoriteApi } from '../api/notesApi'
 
 const Home = () => {
   const { id: paramNoteId } = useParams()
@@ -137,21 +137,33 @@ const Home = () => {
   }
 
   const toggleFavoriteNote = async (idToToggle) => {
-    let newFavState = false
+    // Optimistic UI update
     setNotes((currentNotes) =>
       currentNotes.map((n) => {
         if (n._id === idToToggle) {
-          newFavState = !n.isFavorite
-          return { ...n, isFavorite: newFavState }
+          return { ...n, isFavorite: !n.isFavorite }
         }
         return n
       })
     )
 
     try {
-      await updateNoteApi(idToToggle, { isFavorite: newFavState })
+      const updatedNote = await toggleFavoriteApi(idToToggle)
+      // Sync with server response
+      setNotes((currentNotes) =>
+        currentNotes.map((n) => (n._id === idToToggle ? updatedNote : n))
+      )
     } catch (err) {
       console.warn("Failed to sync favorite status to server:", err)
+      // Revert on failure
+      setNotes((currentNotes) =>
+        currentNotes.map((n) => {
+          if (n._id === idToToggle) {
+            return { ...n, isFavorite: !n.isFavorite }
+          }
+          return n
+        })
+      )
     }
   }
 
@@ -161,7 +173,7 @@ const Home = () => {
     setNotes((currentNotes) => currentNotes.map((n) => (n._id === activeNote._id ? updated : n)))
 
     // Save to API
-    syncNoteToBackend(activeNote._id, updated.title, updated.description, updated.isFavorite)
+    syncNoteToBackend(activeNote._id, updated.title, updated.description)
   }
 
   const updateActiveNoteDescription = (description) => {
@@ -170,12 +182,12 @@ const Home = () => {
     setNotes((currentNotes) => currentNotes.map((n) => (n._id === activeNote._id ? updated : n)))
 
     // Save to API
-    syncNoteToBackend(activeNote._id, updated.title, updated.description, updated.isFavorite)
+    syncNoteToBackend(activeNote._id, updated.title, updated.description)
   }
 
-  const syncNoteToBackend = async (id, title, description, isFavorite) => {
+  const syncNoteToBackend = async (id, title, description) => {
     try {
-      await updateNoteApi(id, { title, description, isFavorite })
+      await updateNoteApi(id, { title, description })
     } catch (err) {
       console.warn("Sync failed for note update:", err)
     }

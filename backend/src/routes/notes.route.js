@@ -1,4 +1,5 @@
-const { addNoteController, getAllNotesController, getSingleNoteController, updateNoteController, deleteNoteController } = require("../controllers/notes.controller");
+const express = require("express");
+const { addNoteController, getAllNotesController, getSingleNoteController, updateNoteController, deleteNoteController, isFavNoteController } = require("../controllers/notes.controller");
 
 
 const router = express.Router();
