@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import { RefreshCw, Star } from 'lucide-react'
 import NoteCard from '../components/NoteCard'
 import AddNoteModal from '../components/AddNoteModal'
 import { fetchNotes, createNoteApi, updateNoteApi, deleteNoteApi } from '../api/notesApi'
 
 const Home = () => {
+  const { id: paramNoteId } = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+
   const [notes, setNotes] = useState([])
-  const [activeNoteId, setActiveNoteId] = useState(null)
+  const [activeNoteId, setActiveNoteId] = useState(paramNoteId || null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [isBackendConnected, setIsBackendConnected] = useState(true)
-  const [activeTab, setActiveTab] = useState('all') // 'all' | 'favorites'
+
+  // Derive activeTab from route location pathname
+  const activeTab = location.pathname.startsWith('/favorites') ? 'favorites' : 'all'
 
   // Modal state for Add Note Form (React Hook Form)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -21,13 +28,25 @@ const Home = () => {
     loadNotesFromApi()
   }, [])
 
+  // Sync activeNoteId when paramNoteId changes from URL
+  useEffect(() => {
+    if (paramNoteId) {
+      setActiveNoteId(paramNoteId)
+    }
+  }, [paramNoteId])
+
   const loadNotesFromApi = async () => {
     setLoading(true)
     try {
       const apiNotes = await fetchNotes()
       if (Array.isArray(apiNotes) && apiNotes.length > 0) {
         setNotes(apiNotes)
-        setActiveNoteId(apiNotes[0]._id)
+        // If URL has note ID, select it; otherwise select first note
+        if (paramNoteId && apiNotes.some((n) => n._id === paramNoteId)) {
+          setActiveNoteId(paramNoteId)
+        } else {
+          setActiveNoteId(apiNotes[0]._id)
+        }
       } else {
         setNotes([])
         setActiveNoteId(null)
@@ -62,6 +81,12 @@ const Home = () => {
     )
   }, [notes, activeTab, search])
 
+  // Select note and sync with URL
+  const handleSelectNote = (id) => {
+    setActiveNoteId(id)
+    navigate(`/note/${id}`)
+  }
+
   // Callback called by AddNoteModal when React Hook Form submits valid data
   const handleAddNoteSubmit = async (formData) => {
     setIsSubmittingNote(true)
@@ -71,7 +96,7 @@ const Home = () => {
         description: formData.description
       })
       setNotes((currentNotes) => [newNote, ...currentNotes])
-      setActiveNoteId(newNote._id)
+      handleSelectNote(newNote._id)
     } catch (err) {
       console.warn("Failed to create note on backend, creating locally:", err)
       const newId = Array.from({ length: 24 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
@@ -83,7 +108,7 @@ const Home = () => {
         __v: 0
       }
       setNotes((currentNotes) => [localNote, ...currentNotes])
-      setActiveNoteId(newId)
+      handleSelectNote(newId)
     } finally {
       setIsSubmittingNote(false)
     }
@@ -93,7 +118,13 @@ const Home = () => {
     setNotes((currentNotes) => {
       const updatedNotes = currentNotes.filter((n) => n._id !== idToDelete)
       if (activeNoteId === idToDelete) {
-        setActiveNoteId(updatedNotes.length > 0 ? updatedNotes[0]._id : null)
+        const nextId = updatedNotes.length > 0 ? updatedNotes[0]._id : null
+        setActiveNoteId(nextId)
+        if (nextId) {
+          navigate(`/note/${nextId}`)
+        } else {
+          navigate('/')
+        }
       }
       return updatedNotes
     })
@@ -165,7 +196,10 @@ const Home = () => {
         <div>
           {/* Brand */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-xl font-bold tracking-tight">
+            <div
+              className="flex items-center gap-3 text-xl font-bold tracking-tight cursor-pointer"
+              onClick={() => navigate('/')}
+            >
               <div className="w-8 h-8 rounded-lg bg-[#e5b46a] text-[#293b38] font-bold text-lg flex items-center justify-center shadow-xs">
                 N
               </div>
@@ -189,11 +223,11 @@ const Home = () => {
             <span className="text-xl leading-none" aria-hidden="true">+</span> New note
           </button>
 
-          {/* Navigation */}
+          {/* Navigation with React Router */}
           <nav className="mt-8 flex flex-row md:flex-col gap-1 font-sans text-xs font-medium" aria-label="Note views">
             <button
               type="button"
-              onClick={() => setActiveTab('all')}
+              onClick={() => navigate('/')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-left cursor-pointer ${
                 activeTab === 'all'
                   ? 'bg-[#38504b] text-white shadow-xs'
@@ -205,7 +239,7 @@ const Home = () => {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('favorites')}
+              onClick={() => navigate('/favorites')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-left cursor-pointer ${
                 activeTab === 'favorites'
                   ? 'bg-[#38504b] text-white shadow-xs'
@@ -268,7 +302,7 @@ const Home = () => {
                 key={note._id}
                 note={note}
                 isSelected={note._id === activeNoteId}
-                onClick={() => setActiveNoteId(note._id)}
+                onClick={() => handleSelectNote(note._id)}
                 onDelete={deleteNote}
                 onToggleFavorite={toggleFavoriteNote}
               />
