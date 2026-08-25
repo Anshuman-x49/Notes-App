@@ -1,7 +1,13 @@
 import axios from 'axios'
 
+// In production, use relative URL ('') so requests target the same origin serving the app (e.g. Render / domain)
+// In development, target http://localhost:3000
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3000' : '')
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json'
   }
