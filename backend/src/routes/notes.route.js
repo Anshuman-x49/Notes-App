@@ -1,9 +1,14 @@
-const express = require("express");
-const { addNoteController, getAllNotesController, getSingleNoteController, updateNoteController, deleteNoteController, isFavNoteController } = require("../controllers/notes.controller");
-
+import express from "express";
+import {
+  addNoteController,
+  getAllNotesController,
+  getSingleNoteController,
+  updateNoteController,
+  deleteNoteController,
+  isFavNoteController,
+} from "../controllers/notes.controller.js";
 
 const router = express.Router();
-
 
 // CREATE
 router.post('/add-note', addNoteController);
@@ -21,4 +26,4 @@ router.delete('/delete-note/:id', deleteNoteController);
 // Fav note
 router.put('/fav-note/:id', isFavNoteController);
 
-module.exports = router;
+export default router;
