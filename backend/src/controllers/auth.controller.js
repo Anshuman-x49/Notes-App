@@ -5,7 +5,7 @@ import { generateToken } from "../utils/auth.js";
 // Register user controller
 export const registerUserController = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { username, email, password } = req.body;
 
         const userAlreadyExist = await userModel.findOne({ email });
 
@@ -17,15 +17,15 @@ export const registerUserController = async (req, res) => {
             });
         }
 
-        const hashPassword = await bcrypt.hash(password, 10);
+        const hashPassword = await bcrypt.hash(password, 12);
 
         const user = await userModel.create({
-            name, email, password: hashPassword
+            username, email, password: hashPassword
         })
 
         const { accessToken, refreshToken } = generateToken({ id: user._id })
 
-        user.refreshToken = refreshToken;
+        user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
         await user.save();
 
         res.cookie("refreshToken", refreshToken, {
@@ -40,7 +40,7 @@ export const registerUserController = async (req, res) => {
             success: true,
             data: {
                 user: {
-                    name: user.name,
+                    username: user.username,
                     email: user.email
                 }
             },
@@ -77,9 +77,18 @@ export const loginuserController = async (req, res) => {
             })
         }
 
+        const passwordValid = await bcrypt.compare(password, user.password);
+
+        if (!passwordValid) {
+            return res.status(401).json({
+                message: "Invalid Credentials",
+                success: false
+            });
+        }
+
         const {accessToken, refreshToken} = generateToken({id: user._id});
 
-        user.refreshToken = refreshToken;
+        user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
         await user.save();
 
         res.cookie("refreshToken", refreshToken, {
@@ -94,7 +103,7 @@ export const loginuserController = async (req, res) => {
             success: true,
             data: {
                 user: {
-                    name: user.name,
+                    username: user.username,
                     email: user.email
                 }
             },
