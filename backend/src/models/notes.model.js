@@ -1,4 +1,4 @@
-const { default: mongoose } = require("mongoose");
+import mongoose from "mongoose";
 
 const noteSchema = new mongoose.Schema({
     title : {
@@ -13,8 +13,8 @@ const noteSchema = new mongoose.Schema({
         type : Boolean,
         default : false,
     }
-}) 
+});
 
-const notesModel = mongoose.model("notes",noteSchema)
+const notesModel = mongoose.model("notes", noteSchema);
 
-module.exports = notesModel
+export default notesModel;

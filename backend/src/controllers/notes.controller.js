@@ -1,7 +1,7 @@
-const notesModel = require("../models/notes.model");
+import notesModel from "../models/notes.model.js";
 
 // Create note controller
-const addNoteController = async (req, res) => {
+export const addNoteController = async (req, res) => {
   try {
     const { title, description } = req.body;
 
@@ -29,7 +29,7 @@ const addNoteController = async (req, res) => {
 };
 
 // Get all notes controller
-const getAllNotesController = async (req, res) => {
+export const getAllNotesController = async (req, res) => {
   try {
     const allNotes = await notesModel.find();
 
@@ -46,7 +46,7 @@ const getAllNotesController = async (req, res) => {
 };
 
 // Get single note controller
-const getSingleNoteController = async (req, res) => {
+export const getSingleNoteController = async (req, res) => {
   try {
     const singleNote = await notesModel.findById(req.params.id);
 
@@ -68,7 +68,7 @@ const getSingleNoteController = async (req, res) => {
 };
 
 // Update note controller
-const updateNoteController = async (req, res) => {
+export const updateNoteController = async (req, res) => {
   try {
     const body = req.body;
 
@@ -94,7 +94,7 @@ const updateNoteController = async (req, res) => {
 };
 
 // Delete note controller
-const deleteNoteController = async (req, res) => {
+export const deleteNoteController = async (req, res) => {
   try {
     const deleteNote = await notesModel.findByIdAndDelete(req.params.id);
 
@@ -117,7 +117,7 @@ const deleteNoteController = async (req, res) => {
 };
 
 // IsFavorite Note controller
-const isFavNoteController = async (req, res) => {
+export const isFavNoteController = async (req, res) => {
   try {
     const isFavNote = await notesModel.findById(req.params.id);
 
@@ -141,14 +141,4 @@ const isFavNoteController = async (req, res) => {
       error: error.message,
     });
   }
-};
-
-
-module.exports = {
-  addNoteController,
-  getAllNotesController,
-  getSingleNoteController,
-  updateNoteController,
-  deleteNoteController,
-  isFavNoteController,
 };
