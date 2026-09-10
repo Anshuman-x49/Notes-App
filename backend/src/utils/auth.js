@@ -6,3 +6,7 @@ export function generateToken({ id }) {
     const refreshToken = jwt.sign({ id }, config.refresh_token_secret, { expiresIn: "7d" });
     return { accessToken, refreshToken };
 }
+
+export function verifyToken(token) {
+    return jwt.verify(token, config.access_token_secret);
+}
