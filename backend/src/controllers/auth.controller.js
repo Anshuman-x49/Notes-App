@@ -184,9 +184,9 @@ export const refreshTokenController = async (req, res) => {
             });
         }
 
-        const validRefreshToken = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+        const validRefreshToken = bcrypt.compare(refreshToken, user.refreshTokenHash);
 
-        if(!validRefreshToken){
+        if (!validRefreshToken) {
             user.refreshTokenHash = null;
             await user.save();
             return res.status(401).json({
@@ -219,6 +219,56 @@ export const refreshTokenController = async (req, res) => {
             accessToken
         });
 
+    } catch (error) {
+        return res.status(500).json({
+            message: "Internal Server Error",
+            error: error.message
+        })
+    }
+}
+
+// Logout user controller
+export const logoutUserController = async (req, res) => {
+
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+        return res.status(401).json({
+            message: "Unauthorized",
+            success: false
+        });
+    }
+    try {
+        const decoded = verifyRefreshToken(refreshToken);
+        const user = await userModel.findById(decoded.id);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                success: false
+            });
+        }
+
+        const validRefreshToken = bcrypt.compare(refreshToken, user.refreshTokenHash);
+
+        if (!validRefreshToken) {
+            user.refreshTokenHash = null;
+            await user.save();
+            return res.status(401).json({
+                message: "Unauthorized",
+                success: false
+            });
+        }
+
+        user.refreshTokenHash = null;
+        await user.save();
+
+        res.clearCookie("refreshToken");
+
+        return res.status(200).json({
+            message: "User logged out successfully",
+            success: true
+        });
     } catch (error) {
         return res.status(500).json({
             message: "Internal Server Error",
