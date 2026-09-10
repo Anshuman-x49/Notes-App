@@ -7,8 +7,12 @@ import {
   deleteNoteController,
   isFavNoteController,
 } from "../controllers/notes.controller.js";
+import protectRoute from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
+
+// All note routes require authentication
+router.use(protectRoute);
 
 // CREATE
 router.post('/add-note', addNoteController);

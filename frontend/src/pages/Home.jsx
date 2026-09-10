@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
-import { RefreshCw, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 import NoteCard from '../components/NoteCard'
 import AddNoteModal from '../components/AddNoteModal'
 import Sidebar from '../components/Sidebar'
@@ -24,19 +24,7 @@ const Home = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isSubmittingNote, setIsSubmittingNote] = useState(false)
 
-  // Fetch notes from backend on mount
-  useEffect(() => {
-    loadNotesFromApi()
-  }, [])
-
-  // Sync activeNoteId when paramNoteId changes from URL
-  useEffect(() => {
-    if (paramNoteId) {
-      setActiveNoteId(paramNoteId)
-    }
-  }, [paramNoteId])
-
-  const loadNotesFromApi = async () => {
+  const loadNotesFromApi = useCallback(async () => {
     setLoading(true)
     try {
       const apiNotes = await fetchNotes()
@@ -54,14 +42,26 @@ const Home = () => {
       }
       setIsBackendConnected(true)
     } catch (err) {
-      console.warn("Backend API not reachable, using empty local state:", err)
+      console.warn("Backend API not reachable:", err)
       setIsBackendConnected(false)
       setNotes([])
       setActiveNoteId(null)
     } finally {
       setLoading(false)
     }
-  }
+  }, [paramNoteId])
+
+  // Fetch notes from backend on mount
+  useEffect(() => {
+    loadNotesFromApi()
+  }, [loadNotesFromApi])
+
+  // Sync activeNoteId when paramNoteId changes from URL
+  useEffect(() => {
+    if (paramNoteId) {
+      setActiveNoteId(paramNoteId)
+    }
+  }, [paramNoteId])
 
   const activeNote = notes.find((note) => note._id === activeNoteId) ?? notes[0]
   const isMobileEditorOpen = Boolean(paramNoteId && activeNote)
@@ -97,20 +97,12 @@ const Home = () => {
         title: formData.title,
         description: formData.description
       })
-      setNotes((currentNotes) => [newNote, ...currentNotes])
-      handleSelectNote(newNote._id)
-    } catch (err) {
-      console.warn("Failed to create note on backend, creating locally:", err)
-      const newId = Array.from({ length: 24 }, () => Math.floor(Math.random() * 16).toString(16)).join('')
-      const localNote = {
-        _id: newId,
-        title: formData.title,
-        description: formData.description,
-        isFavorite: false,
-        __v: 0
+      if (newNote?._id) {
+        setNotes((currentNotes) => [newNote, ...currentNotes])
+        handleSelectNote(newNote._id)
       }
-      setNotes((currentNotes) => [localNote, ...currentNotes])
-      handleSelectNote(newId)
+    } catch (err) {
+      console.error("Failed to create note on backend:", err)
     } finally {
       setIsSubmittingNote(false)
     }

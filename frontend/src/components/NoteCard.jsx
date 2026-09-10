@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react'
+import { Star, Trash2 } from 'lucide-react'
 
 /**
  * NoteCard Component (Tailwind CSS)
@@ -8,7 +8,6 @@ import { Star } from 'lucide-react'
  *   title: string,
  *   description: string,
  *   isFavorite?: boolean,
- *   __v?: number
  * }
  */
 const NoteCard = ({ note, isSelected, onClick, onDelete, onToggleFavorite }) => {
@@ -53,10 +52,10 @@ const NoteCard = ({ note, isSelected, onClick, onDelete, onToggleFavorite }) => 
           {onToggleFavorite && (
             <button
               type="button"
-              className={`p-1 rounded-md transition-all ${
+              className={`p-1.5 sm:p-1 rounded-md transition-all cursor-pointer ${
                 isFavorite
                   ? 'opacity-100 text-amber-500 hover:text-amber-600 bg-amber-50'
-                  : 'opacity-0 group-hover:opacity-100 text-stone-400 hover:text-amber-500 hover:bg-stone-200/60'
+                  : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-stone-400 hover:text-amber-500 hover:bg-stone-200/60'
               }`}
               onClick={handleFavoriteToggle}
               title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
@@ -70,20 +69,12 @@ const NoteCard = ({ note, isSelected, onClick, onDelete, onToggleFavorite }) => 
           {onDelete && (
             <button
               type="button"
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-md focus:opacity-100"
+              className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1.5 sm:p-1 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-md focus:opacity-100 cursor-pointer"
               onClick={handleDelete}
               title="Delete note"
               aria-label="Delete note"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>

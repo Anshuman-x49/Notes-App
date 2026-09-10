@@ -1,4 +1,3 @@
-import React from 'react'
 import { Navigate, useLocation, Outlet } from 'react-router'
 import { useSelector } from 'react-redux'
 import { Loader2 } from 'lucide-react'

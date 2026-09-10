@@ -63,15 +63,6 @@ export const refreshTokenApi = async () => {
 }
 
 /**
- * Get current authenticated user
- * GET /api/auth/get-user
- */
-export const getCurrentUserApi = async () => {
-  const response = await client.get('/api/auth/get-user')
-  return response.data?.data?.user
-}
-
-/**
  * Logout user
  * POST /api/auth/logout
  */

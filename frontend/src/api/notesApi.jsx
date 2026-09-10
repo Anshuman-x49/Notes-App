@@ -29,5 +29,3 @@ export const toggleFavoriteApi = async (id) => {
   const response = await client.put(`/api/notes/fav-note/${id}`)
   return response.data.data
 }
-
-export default client
