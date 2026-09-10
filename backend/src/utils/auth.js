@@ -7,6 +7,10 @@ export function generateToken({ id }) {
     return { accessToken, refreshToken };
 }
 
-export function verifyToken(token) {
+export function verifyAccessToken(token) {
     return jwt.verify(token, config.access_token_secret);
+}
+
+export function verifyRefreshToken(token) {
+    return jwt.verify(token, config.refresh_token_secret);
 }

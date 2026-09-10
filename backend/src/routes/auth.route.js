@@ -1,5 +1,5 @@
 import express from "express";
-import { registerUserController, loginUserController, getUserController } from "../controllers/auth.controller.js";
+import { registerUserController, loginUserController, getUserController, refreshTokenController } from "../controllers/auth.controller.js";
 
 const router = express.Router();
 /**
@@ -22,5 +22,12 @@ router.post("/login", loginUserController);
  * @access private
  */
 router.get("/get-user", getUserController);
+
+/**
+ * @desc refresh token
+ * @route POST /api/auth/refresh
+ * @access private
+ */
+router.post("/refresh", refreshTokenController);
 
 export default router;
