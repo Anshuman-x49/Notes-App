@@ -4,44 +4,26 @@ import {
   registerApi,
   logoutApi,
   refreshTokenApi,
-  getCurrentUserApi,
 } from '../../api/authApi'
-import {
-  getStoredAccessToken,
-  getStoredRefreshToken,
-  clearStoredTokens,
-} from '../../api/client'
+import { setAccessToken, clearAccessToken } from '../../api/client'
 
-// Async Thunk: Check and rehydrate auth session on app startup
+// Async Thunk: Check and rehydrate auth session on app startup via httpOnly cookie
 export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
   async (_, { rejectWithValue }) => {
-    const storedAccessToken = getStoredAccessToken()
-    const storedRefreshToken = getStoredRefreshToken()
-
-    if (storedAccessToken) {
-      try {
-        const user = await getCurrentUserApi()
-        return { user, token: storedAccessToken }
-      } catch {
-        // Access token expired, proceed to attempt refresh
+    try {
+      // Attempt silent token refresh using the httpOnly cookie sent by browser
+      const refreshData = await refreshTokenApi()
+      if (refreshData?.user && refreshData?.accessToken) {
+        setAccessToken(refreshData.accessToken)
+        return { user: refreshData.user, token: refreshData.accessToken }
       }
+      clearAccessToken()
+      return rejectWithValue('No active session')
+    } catch {
+      clearAccessToken()
+      return rejectWithValue('No active session')
     }
-
-    if (storedRefreshToken || (typeof document !== 'undefined' && document.cookie.includes('refreshToken'))) {
-      try {
-        const refreshData = await refreshTokenApi()
-        if (refreshData?.user) {
-          return { user: refreshData.user, token: refreshData.accessToken }
-        }
-      } catch (err) {
-        clearStoredTokens()
-        return rejectWithValue(err.response?.data?.message || 'Session expired')
-      }
-    }
-
-    clearStoredTokens()
-    return rejectWithValue('No active session')
   }
 )
 
@@ -51,6 +33,9 @@ export const loginUser = createAsyncThunk(
   async ({ email, password }, { rejectWithValue }) => {
     try {
       const data = await loginApi({ email, password })
+      if (data?.accessToken) {
+        setAccessToken(data.accessToken)
+      }
       return data
     } catch (err) {
       const message =
@@ -69,6 +54,9 @@ export const registerUser = createAsyncThunk(
   async ({ username, email, password }, { rejectWithValue }) => {
     try {
       const data = await registerApi({ username, email, password })
+      if (data?.accessToken) {
+        setAccessToken(data.accessToken)
+      }
       return data
     } catch (err) {
       const message =
@@ -84,30 +72,34 @@ export const registerUser = createAsyncThunk(
 // Async Thunk: User Logout
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   await logoutApi()
-  clearStoredTokens()
+  clearAccessToken()
   return null
 })
 
-// Async Thunk: Refresh Token
+// Async Thunk: Manual Refresh Token Trigger
 export const refreshAuthSession = createAsyncThunk(
   'auth/refreshSession',
   async (_, { rejectWithValue }) => {
     try {
       const data = await refreshTokenApi()
+      if (data?.accessToken) {
+        setAccessToken(data.accessToken)
+      }
       return data
     } catch (err) {
-      clearStoredTokens()
+      clearAccessToken()
       return rejectWithValue(err.response?.data?.message || 'Refresh failed')
     }
   }
 )
 
+// Redux State: Access token is stored strictly in memory (state.token)
 const initialState = {
   user: null,
-  token: getStoredAccessToken(),
+  token: null, // Strictly in-memory Redux state, never in localStorage
   isAuthenticated: false,
-  isLoading: true, // initial check loading
-  isSubmitting: false, // form submit loading
+  isLoading: true, // Initial session check
+  isSubmitting: false, // Form submissions
   error: null,
 }
 
@@ -123,6 +115,9 @@ const authSlice = createSlice({
       state.token = action.payload.token
       state.isAuthenticated = Boolean(action.payload.user)
       state.isLoading = false
+      if (action.payload.token) {
+        setAccessToken(action.payload.token)
+      }
     },
     resetAuth: (state) => {
       state.user = null
@@ -131,7 +126,7 @@ const authSlice = createSlice({
       state.isLoading = false
       state.isSubmitting = false
       state.error = null
-      clearStoredTokens()
+      clearAccessToken()
     },
   },
   extraReducers: (builder) => {
@@ -217,4 +212,6 @@ const authSlice = createSlice({
 })
 
 export const { clearAuthError, setCredentials, resetAuth } = authSlice.actions
-export default authSlice.reducer
+
+const authReducer = authSlice.reducer
+export default authReducer

@@ -1,9 +1,4 @@
-import client, {
-  getStoredRefreshToken,
-  setStoredAccessToken,
-  setStoredRefreshToken,
-  clearStoredTokens,
-} from './client'
+import client, { setAccessToken, clearAccessToken } from './client'
 
 /**
  * Register a new user
@@ -16,12 +11,9 @@ export const registerApi = async ({ username, email, password }) => {
     password,
   })
 
-  const { accessToken, refreshToken, data } = response.data
+  const { accessToken, data } = response.data
   if (accessToken) {
-    setStoredAccessToken(accessToken)
-  }
-  if (refreshToken) {
-    setStoredRefreshToken(refreshToken)
+    setAccessToken(accessToken)
   }
 
   return {
@@ -40,12 +32,9 @@ export const loginApi = async ({ email, password }) => {
     password,
   })
 
-  const { accessToken, refreshToken, data } = response.data
+  const { accessToken, data } = response.data
   if (accessToken) {
-    setStoredAccessToken(accessToken)
-  }
-  if (refreshToken) {
-    setStoredRefreshToken(refreshToken)
+    setAccessToken(accessToken)
   }
 
   return {
@@ -57,19 +46,14 @@ export const loginApi = async ({ email, password }) => {
 /**
  * Refresh access token
  * POST /api/auth/refresh
+ * (HttpOnly cookie is automatically attached by browser)
  */
 export const refreshTokenApi = async () => {
-  const refreshToken = getStoredRefreshToken()
-  const response = await client.post('/api/auth/refresh', {
-    refreshToken,
-  })
+  const response = await client.post('/api/auth/refresh', {})
 
-  const { accessToken, refreshToken: newRefreshToken, data } = response.data
+  const { accessToken, data } = response.data
   if (accessToken) {
-    setStoredAccessToken(accessToken)
-  }
-  if (newRefreshToken) {
-    setStoredRefreshToken(newRefreshToken)
+    setAccessToken(accessToken)
   }
 
   return {
@@ -88,16 +72,15 @@ export const getCurrentUserApi = async () => {
 }
 
 /**
- * Logout user and clear tokens
+ * Logout user
  * POST /api/auth/logout
  */
 export const logoutApi = async () => {
   try {
-    const refreshToken = getStoredRefreshToken()
-    await client.post('/api/auth/logout', { refreshToken })
+    await client.post('/api/auth/logout', {})
   } catch (error) {
     console.warn('Backend logout request failed or session already cleared:', error)
   } finally {
-    clearStoredTokens()
+    clearAccessToken()
   }
 }
