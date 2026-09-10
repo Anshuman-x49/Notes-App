@@ -1,6 +1,6 @@
 import userModel from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import { generateToken, verifyToken } from "../utils/auth.js";
+import { generateToken, verifyAccessToken, verifyRefreshToken } from "../utils/auth.js";
 
 // Register user controller
 export const registerUserController = async (req, res) => {
@@ -118,6 +118,7 @@ export const loginUserController = async (req, res) => {
     }
 }
 
+// Get user controller
 export const getUserController = async (req, res) => {
 
     const accessToken = req.headers.authorization.split(" ")[1];
@@ -130,7 +131,7 @@ export const getUserController = async (req, res) => {
     }
 
     try {
-        const decoded = verifyToken(accessToken);
+        const decoded = verifyAccessToken(accessToken);
 
         const user = await userModel.findById(decoded.id);
 
@@ -151,6 +152,73 @@ export const getUserController = async (req, res) => {
                 }
             }
         });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Internal Server Error",
+            error: error.message
+        })
+    }
+}
+
+// Refresh Token controller
+export const refreshTokenController = async (req, res) => {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+        return res.status(401).json({
+            message: "Unauthorized",
+            success: false
+        });
+    }
+
+    try {
+
+        const decoded = verifyRefreshToken(refreshToken);
+
+        const user = await userModel.findById(decoded.id);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                success: false
+            });
+        }
+
+        const validRefreshToken = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+
+        if(!validRefreshToken){
+            user.refreshTokenHash = null;
+            await user.save();
+            return res.status(401).json({
+                message: "Unauthorized",
+                success: false
+            });
+        }
+
+        const { accessToken, refreshToken: newRefreshToken } = generateToken({ id: user._id });
+
+        user.refreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
+        await user.save();
+
+        res.cookie("refreshToken", newRefreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return res.status(200).json({
+            message: "User refreshed successfully",
+            success: true,
+            data: {
+                user: {
+                    username: user.username,
+                    email: user.email
+                }
+            },
+            accessToken
+        });
+
     } catch (error) {
         return res.status(500).json({
             message: "Internal Server Error",
