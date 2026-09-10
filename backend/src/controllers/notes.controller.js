@@ -29,7 +29,7 @@ export const addNoteController = async (req, res) => {
   }
 };
 
-// Get all notes controller (user-scoped)
+// Get all notes controller
 export const getAllNotesController = async (req, res) => {
   try {
     const allNotes = await notesModel
@@ -48,7 +48,7 @@ export const getAllNotesController = async (req, res) => {
   }
 };
 
-// Get single note controller (user-scoped)
+// Get single note controller
 export const getSingleNoteController = async (req, res) => {
   try {
     const singleNote = await notesModel.findOne({
@@ -73,7 +73,7 @@ export const getSingleNoteController = async (req, res) => {
   }
 };
 
-// Update note controller (user-scoped)
+// Update note controller
 export const updateNoteController = async (req, res) => {
   try {
     const body = req.body;
@@ -101,7 +101,7 @@ export const updateNoteController = async (req, res) => {
   }
 };
 
-// Delete note controller (user-scoped)
+// Delete note controller
 export const deleteNoteController = async (req, res) => {
   try {
     const deleteNote = await notesModel.findOneAndDelete({
@@ -127,7 +127,7 @@ export const deleteNoteController = async (req, res) => {
   }
 };
 
-// IsFavorite Note controller (user-scoped)
+// IsFavorite Note controller
 export const isFavNoteController = async (req, res) => {
   try {
     const isFavNote = await notesModel.findOne({
