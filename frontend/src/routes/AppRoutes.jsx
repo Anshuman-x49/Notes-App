@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { useDispatch } from 'react-redux'
 import { checkAuth } from '../store/slices/authSlice'
-import MainLayout from '../layouts/MainLayout'
 import AuthLayout from '../layouts/AuthLayout'
 import Home from '../pages/Home'
 import Login from '../pages/Login'
@@ -34,21 +33,16 @@ const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        element: <MainLayout />,
-        children: [
-          {
-            index: true,
-            element: <Home />,
-          },
-          {
-            path: 'favorites',
-            element: <Home />,
-          },
-          {
-            path: 'note/:id',
-            element: <Home />,
-          },
-        ],
+        index: true,
+        element: <Home />,
+      },
+      {
+        path: 'favorites',
+        element: <Home />,
+      },
+      {
+        path: 'note/:id',
+        element: <Home />,
       },
     ],
   },

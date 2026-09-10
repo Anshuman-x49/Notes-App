@@ -14,6 +14,7 @@ export const addNoteController = async (req, res) => {
     const newNote = await notesModel.create({
       title,
       description,
+      user: req.user.id,
     });
 
     return res.status(201).json({
@@ -28,10 +29,12 @@ export const addNoteController = async (req, res) => {
   }
 };
 
-// Get all notes controller
+// Get all notes controller (user-scoped)
 export const getAllNotesController = async (req, res) => {
   try {
-    const allNotes = await notesModel.find();
+    const allNotes = await notesModel
+      .find({ user: req.user.id })
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       message: "Notes fetched successfully",
@@ -45,10 +48,13 @@ export const getAllNotesController = async (req, res) => {
   }
 };
 
-// Get single note controller
+// Get single note controller (user-scoped)
 export const getSingleNoteController = async (req, res) => {
   try {
-    const singleNote = await notesModel.findById(req.params.id);
+    const singleNote = await notesModel.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
 
     if (!singleNote) {
       return res.status(404).json({
@@ -67,14 +73,16 @@ export const getSingleNoteController = async (req, res) => {
   }
 };
 
-// Update note controller
+// Update note controller (user-scoped)
 export const updateNoteController = async (req, res) => {
   try {
     const body = req.body;
 
-    const note = await notesModel.findByIdAndUpdate(req.params.id, body, {
-      new: true,
-    });
+    const note = await notesModel.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id },
+      body,
+      { new: true, runValidators: true }
+    );
 
     if (!note) {
       return res.status(404).json({
@@ -93,10 +101,13 @@ export const updateNoteController = async (req, res) => {
   }
 };
 
-// Delete note controller
+// Delete note controller (user-scoped)
 export const deleteNoteController = async (req, res) => {
   try {
-    const deleteNote = await notesModel.findByIdAndDelete(req.params.id);
+    const deleteNote = await notesModel.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id,
+    });
 
     if (!deleteNote) {
       return res.status(404).json({
@@ -116,10 +127,13 @@ export const deleteNoteController = async (req, res) => {
   }
 };
 
-// IsFavorite Note controller
+// IsFavorite Note controller (user-scoped)
 export const isFavNoteController = async (req, res) => {
   try {
-    const isFavNote = await notesModel.findById(req.params.id);
+    const isFavNote = await notesModel.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
 
     if (!isFavNote) {
       return res.status(404).json({

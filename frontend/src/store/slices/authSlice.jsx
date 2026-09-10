@@ -12,16 +12,12 @@ export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
   async (_, { rejectWithValue }) => {
     try {
-      // Attempt silent token refresh using the httpOnly cookie sent by browser
       const refreshData = await refreshTokenApi()
       if (refreshData?.user && refreshData?.accessToken) {
-        setAccessToken(refreshData.accessToken)
         return { user: refreshData.user, token: refreshData.accessToken }
       }
-      clearAccessToken()
       return rejectWithValue('No active session')
     } catch {
-      clearAccessToken()
       return rejectWithValue('No active session')
     }
   }
@@ -32,11 +28,7 @@ export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const data = await loginApi({ email, password })
-      if (data?.accessToken) {
-        setAccessToken(data.accessToken)
-      }
-      return data
+      return await loginApi({ email, password })
     } catch (err) {
       const message =
         err.response?.data?.message ||
@@ -53,11 +45,7 @@ export const registerUser = createAsyncThunk(
   'auth/registerUser',
   async ({ username, email, password }, { rejectWithValue }) => {
     try {
-      const data = await registerApi({ username, email, password })
-      if (data?.accessToken) {
-        setAccessToken(data.accessToken)
-      }
-      return data
+      return await registerApi({ username, email, password })
     } catch (err) {
       const message =
         err.response?.data?.message ||
@@ -72,26 +60,8 @@ export const registerUser = createAsyncThunk(
 // Async Thunk: User Logout
 export const logoutUser = createAsyncThunk('auth/logoutUser', async () => {
   await logoutApi()
-  clearAccessToken()
   return null
 })
-
-// Async Thunk: Manual Refresh Token Trigger
-export const refreshAuthSession = createAsyncThunk(
-  'auth/refreshSession',
-  async (_, { rejectWithValue }) => {
-    try {
-      const data = await refreshTokenApi()
-      if (data?.accessToken) {
-        setAccessToken(data.accessToken)
-      }
-      return data
-    } catch (err) {
-      clearAccessToken()
-      return rejectWithValue(err.response?.data?.message || 'Refresh failed')
-    }
-  }
-)
 
 // Redux State: Access token is stored strictly in memory (state.token)
 const initialState = {
@@ -191,22 +161,6 @@ const authSlice = createSlice({
         state.isLoading = false
         state.isSubmitting = false
         state.error = null
-      })
-
-      // refreshAuthSession
-      .addCase(refreshAuthSession.fulfilled, (state, action) => {
-        if (action.payload?.user) {
-          state.user = action.payload.user
-        }
-        if (action.payload?.accessToken) {
-          state.token = action.payload.accessToken
-        }
-        state.isAuthenticated = true
-      })
-      .addCase(refreshAuthSession.rejected, (state) => {
-        state.user = null
-        state.token = null
-        state.isAuthenticated = false
       })
   },
 })
