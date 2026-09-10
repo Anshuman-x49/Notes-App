@@ -1,6 +1,6 @@
 import userModel from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import { generateToken } from "../utils/auth.js";
+import { generateToken, verifyToken } from "../utils/auth.js";
 
 // Register user controller
 export const registerUserController = async (req, res) => {
@@ -57,7 +57,8 @@ export const registerUserController = async (req, res) => {
     }
 }
 
-export const loginuserController = async (req, res) => {
+// Login user controller
+export const loginUserController = async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -86,7 +87,7 @@ export const loginuserController = async (req, res) => {
             });
         }
 
-        const {accessToken, refreshToken} = generateToken({id: user._id});
+        const { accessToken, refreshToken } = generateToken({ id: user._id });
 
         user.refreshTokenHash = await bcrypt.hash(refreshToken, 10);
         await user.save();
@@ -109,6 +110,47 @@ export const loginuserController = async (req, res) => {
             },
             accessToken
         })
+    } catch (error) {
+        return res.status(500).json({
+            message: "Internal Server Error",
+            error: error.message
+        })
+    }
+}
+
+export const getUserController = async (req, res) => {
+
+    const accessToken = req.headers.authorization.split(" ")[1];
+
+    if (!accessToken) {
+        return res.status(401).json({
+            message: "Unauthorized",
+            success: false
+        });
+    }
+
+    try {
+        const decoded = verifyToken(accessToken);
+
+        const user = await userModel.findById(decoded.id);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                success: false
+            });
+        }
+
+        return res.status(200).json({
+            message: "User fetched successfully",
+            success: true,
+            data: {
+                user: {
+                    username: user.username,
+                    email: user.email
+                }
+            }
+        });
     } catch (error) {
         return res.status(500).json({
             message: "Internal Server Error",
