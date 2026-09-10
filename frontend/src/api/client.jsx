@@ -5,66 +5,31 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3000' : '')
 
-// Storage keys
-const ACCESS_TOKEN_KEY = 'notely_access_token'
-const REFRESH_TOKEN_KEY = 'notely_refresh_token'
+// In-Memory access token storage (never written to localStorage)
+let inMemoryAccessToken = null
 
-export const getStoredAccessToken = () => {
-  try {
-    return localStorage.getItem(ACCESS_TOKEN_KEY)
-  } catch {
-    return null
-  }
+export const getAccessToken = () => inMemoryAccessToken
+
+export const setAccessToken = (token) => {
+  inMemoryAccessToken = token || null
 }
 
-export const setStoredAccessToken = (token) => {
-  try {
-    if (token) {
-      localStorage.setItem(ACCESS_TOKEN_KEY, token)
-    } else {
-      localStorage.removeItem(ACCESS_TOKEN_KEY)
-    }
-  } catch (e) {
-    console.warn('Could not store access token:', e)
-  }
+export const clearAccessToken = () => {
+  inMemoryAccessToken = null
 }
 
-export const getStoredRefreshToken = () => {
-  try {
-    return localStorage.getItem(REFRESH_TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-export const setStoredRefreshToken = (token) => {
-  try {
-    if (token) {
-      localStorage.setItem(REFRESH_TOKEN_KEY, token)
-    } else {
-      localStorage.removeItem(REFRESH_TOKEN_KEY)
-    }
-  } catch (e) {
-    console.warn('Could not store refresh token:', e)
-  }
-}
-
-export const clearStoredTokens = () => {
-  try {
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
-  } catch (e) {
-    console.warn('Could not clear stored tokens:', e)
-  }
-}
-
-// Global subscriber for auth state invalidation (e.g. refresh token failure)
+// Global subscribers for auth synchronization with Redux store
 let onAuthFailedListener = null
 export const setOnAuthFailedListener = (callback) => {
   onAuthFailedListener = callback
 }
 
-// Primary axios instance
+let onTokenRefreshedListener = null
+export const setOnTokenRefreshedListener = (callback) => {
+  onTokenRefreshedListener = callback
+}
+
+// Primary axios instance configured with credentials for httpOnly cookies
 const client = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -73,10 +38,10 @@ const client = axios.create({
   withCredentials: true,
 })
 
-// Request interceptor — attach access token
+// Request interceptor — attach in-memory access token
 client.interceptors.request.use(
   (config) => {
-    const token = getStoredAccessToken()
+    const token = getAccessToken()
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -133,11 +98,10 @@ client.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const refreshToken = getStoredRefreshToken()
-        // Call refresh endpoint directly using raw axios to bypass client interceptors
+        // Call refresh endpoint directly (httpOnly cookie automatically sent with credentials)
         const refreshResponse = await axios.post(
           `${API_BASE_URL}/api/auth/refresh`,
-          { refreshToken },
+          {},
           {
             withCredentials: true,
             headers: { 'Content-Type': 'application/json' },
@@ -145,19 +109,21 @@ client.interceptors.response.use(
         )
 
         const newAccessToken = refreshResponse.data?.accessToken
-        const newRefreshToken = refreshResponse.data?.refreshToken
+        const user = refreshResponse.data?.data?.user
 
         if (!newAccessToken) {
           throw new Error('No access token returned from refresh endpoint')
         }
 
-        // Store new tokens
-        setStoredAccessToken(newAccessToken)
-        if (newRefreshToken) {
-          setStoredRefreshToken(newRefreshToken)
+        // Store new access token in memory
+        setAccessToken(newAccessToken)
+
+        // Notify Redux store of token refresh
+        if (typeof onTokenRefreshedListener === 'function') {
+          onTokenRefreshedListener({ token: newAccessToken, user })
         }
 
-        // Update default header on client
+        // Update default header on client and active request
         client.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
 
@@ -167,7 +133,7 @@ client.interceptors.response.use(
         return client(originalRequest)
       } catch (refreshErr) {
         processQueue(refreshErr, null)
-        clearStoredTokens()
+        clearAccessToken()
 
         if (typeof onAuthFailedListener === 'function') {
           onAuthFailedListener()
